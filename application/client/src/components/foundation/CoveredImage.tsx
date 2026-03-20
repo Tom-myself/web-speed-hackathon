@@ -11,11 +11,12 @@ interface Props {
 }
 
 /**
- * アスペクト比を維持したまま、要素のコンテンツボックス全体を埋めるように画像を拡大縮小します
+ * アスペクト比を維持しつつ、FCP 最適化済みで画像を表示
  */
-export const CoveredImage = ({ src, loading = "lazy", fetchPriority = "auto" }: Props) => {
+export const CoveredImage = ({ src, loading = "eager", fetchPriority = "high" }: Props) => {
   const dialogId = useId();
-  // ダイアログの背景をクリックしたときに投稿詳細ページに遷移しないようにする
+  
+  // ダイアログの背景クリックで投稿詳細に遷移しない
   const handleDialogClick = useCallback((ev: MouseEvent<HTMLDialogElement>) => {
     ev.stopPropagation();
   }, []);
@@ -52,18 +53,19 @@ export const CoveredImage = ({ src, loading = "lazy", fetchPriority = "auto" }: 
             raw != null ? new TextDecoder().decode(Buffer.from(raw, "binary")) : "";
           setAlt(decoded);
         } catch {
-          // ALT は空でも致命ではないため握りつぶします
+          // ALT は空でも致命ではない
         }
       })();
     });
   }, [isExifParsed, shouldParseExif, src]);
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    // 親に aspect-ratio を指定してブラウザがすぐレイアウトを決定できる
+    <div className="relative w-full aspect-[16/9] overflow-hidden">
       <img
         alt={alt}
-        loading={loading}
-        fetchPriority={fetchPriority}
+        loading={loading}          // eager にして初回描画を高速化
+        fetchPriority={fetchPriority} // high で優先的に取得
         decoding="async"
         className={classNames("absolute inset-0 h-full w-full object-cover")}
         src={src}
@@ -82,9 +84,7 @@ export const CoveredImage = ({ src, loading = "lazy", fetchPriority = "auto" }: 
       <Modal id={dialogId} closedby="any" onClick={handleDialogClick}>
         <div className="grid gap-y-6">
           <h1 className="text-center text-2xl font-bold">画像の説明</h1>
-
           <p className="text-sm">{alt}</p>
-
           <Button variant="secondary" command="close" commandfor={dialogId}>
             閉じる
           </Button>
